@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CredPay Infrastructure</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --surface: #ffffff;
+    --surface-2: #eef1f7;
+    --text: #172033;
+    --muted: #5b6478;
+    --border: #d9deea;
+    --shadow: 0 1px 2px rgba(20, 30, 60, .06), 0 6px 20px rgba(20, 30, 60, .06);
+
+    --azure: #0f6cbd;      --azure-soft: #e3effa;
+    --k8s: #5b4fd6;        --k8s-soft: #ebe9fc;
+    --data: #0f8a7e;       --data-soft: #ddf3f0;
+    --sec: #b26a00;        --sec-soft: #fbf0dc;
+    --obs: #a33ea8;        --obs-soft: #f7e6f8;
+    --good: #1f8a4c;       --good-soft: #def3e6;
+    --warn: #b26a00;       --warn-soft: #fbf0dc;
+    --bad: #c4312a;        --bad-soft: #fbe3e1;
+    --dev: #1f8a4c;  --qa: #c27c0e;  --prod: #c4312a;
+
+    --hero-a: #0f3d8c;  --hero-b: #5b4fd6;  --hero-c: #0f8a7e;
+    --code-bg: #0f172a; --code-text: #dbe4ff;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1220; --surface: #151c2e; --surface-2: #1c2539; --text: #e6eaf4; --muted: #9aa4bb;
+      --border: #2a3550; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+      --azure: #6cb4ff; --azure-soft: #13294a; --k8s: #a59cff; --k8s-soft: #251f52;
+      --data: #4fd1c2; --data-soft: #0f3330; --sec: #f2b45a; --sec-soft: #3a2a12;
+      --obs: #e48be8; --obs-soft: #3a1a3c; --good: #5fd08f; --good-soft: #143222;
+      --warn: #f2b45a; --warn-soft: #3a2a12; --bad: #ff8a80; --bad-soft: #3e1d1b;
+      --dev: #5fd08f; --qa: #f2b45a; --prod: #ff8a80;
+      --hero-a: #10244f; --hero-b: #3a2f8f; --hero-c: #0b5049;
+      --code-bg: #0a0f1c; --code-text: #dbe4ff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1220; --surface: #151c2e; --surface-2: #1c2539; --text: #e6eaf4; --muted: #9aa4bb;
+    --border: #2a3550; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    --azure: #6cb4ff; --azure-soft: #13294a; --k8s: #a59cff; --k8s-soft: #251f52;
+    --data: #4fd1c2; --data-soft: #0f3330; --sec: #f2b45a; --sec-soft: #3a2a12;
+    --obs: #e48be8; --obs-soft: #3a1a3c; --good: #5fd08f; --good-soft: #143222;
+    --warn: #f2b45a; --warn-soft: #3a2a12; --bad: #ff8a80; --bad-soft: #3e1d1b;
+    --dev: #5fd08f; --qa: #f2b45a; --prod: #ff8a80;
+    --hero-a: #10244f; --hero-b: #3a2f8f; --hero-c: #0b5049;
+    --code-bg: #0a0f1c; --code-text: #dbe4ff;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  a { color: var(--azure); }
+  code {
+    font-family: "Cascadia Code", ui-monospace, Consolas, monospace; font-size: .86em;
+    background: var(--surface-2); padding: 1px 6px; border-radius: 5px;
+  }
+  p, li { max-width: 78ch; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background: linear-gradient(120deg, var(--hero-a), var(--hero-b) 55%, var(--hero-c));
+    color: #fff; padding: 56px 16px 72px; position: relative; overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.12) 1px, transparent 1px);
+    background-size: 22px 22px; pointer-events: none;
+  }
+  .hero-inner { max-width: 1120px; margin: 0 auto; position: relative; z-index: 1; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: .78rem; opacity: .85; font-weight: 600; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; margin: 10px 0 14px; }
+  .hero p { font-size: 1.1rem; opacity: .92; margin: 0; max-width: 62ch; }
+  .theme-btn {
+    position: absolute; top: 0; right: 0; background: rgba(255,255,255,.15); color: #fff;
+    border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 6px 14px;
+    font: inherit; font-size: .85rem; cursor: pointer;
+  }
+  .stats {
+    max-width: 1120px; margin: -44px auto 0; padding: 0 16px; position: relative; z-index: 2;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
+  }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 18px;
+  }
+  .stat .num { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+  .stat .lbl { color: var(--muted); font-size: .88rem; }
+  .stat:nth-child(1) .num { color: var(--azure); }
+  .stat:nth-child(2) .num { color: var(--k8s); }
+  .stat:nth-child(3) .num { color: var(--data); }
+  .stat:nth-child(4) .num { color: var(--obs); }
+  .stat:nth-child(5) .num { color: var(--sec); }
+
+  /* ---------- Layout ---------- */
+  .layout { max-width: 1120px; margin: 0 auto; padding: 32px 16px 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 36px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } .side { display: none; } }
+  .side nav { position: sticky; top: 20px; font-size: .9rem; }
+  .side a {
+    display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--muted);
+    padding: 6px 10px; border-radius: 8px;
+  }
+  .side a:hover { background: var(--surface-2); color: var(--text); }
+  .side a span {
+    width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
+    font-size: .75rem; font-weight: 700; color: #fff; background: var(--c, var(--azure)); flex: none;
+  }
+
+  section { margin-bottom: 64px; scroll-margin-top: 16px; }
+  .sec-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .sec-num {
+    width: 44px; height: 44px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: var(--c, var(--azure)); color: #fff; font-weight: 700; font-size: 1.1rem;
+  }
+  .sec-head h2 { margin: 0; font-size: 1.6rem; line-height: 1.2; }
+  .sec-head .sub { color: var(--muted); font-size: .95rem; }
+  h3 { font-size: 1.12rem; margin: 30px 0 10px; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px; margin: 16px 0;
+  }
+  .scroll-x { overflow-x: auto; }
+
+  /* ---------- Architecture SVG ---------- */
+  .arch { width: 100%; min-width: 720px; height: auto; display: block; }
+  .arch text { font-family: "Segoe UI", system-ui, sans-serif; fill: var(--text); }
+  .arch .t-muted { fill: var(--muted); }
+  .arch .region { fill: none; stroke: var(--azure); stroke-width: 2; stroke-dasharray: 8 6; }
+  .arch .rg { fill: var(--azure-soft); stroke: var(--azure); stroke-width: 1.5; }
+  .arch .vnet { fill: var(--surface); stroke: var(--azure); stroke-width: 1.2; stroke-dasharray: 4 4; }
+  .arch .aks { fill: var(--k8s-soft); stroke: var(--k8s); stroke-width: 2; }
+  .arch .box { fill: var(--surface); stroke: var(--border); stroke-width: 1.4; }
+  .arch .box-data { fill: var(--data-soft); stroke: var(--data); stroke-width: 1.5; }
+  .arch .box-sec { fill: var(--sec-soft); stroke: var(--sec); stroke-width: 1.5; }
+  .arch .box-obs { fill: var(--obs-soft); stroke: var(--obs); stroke-width: 1.5; }
+  .arch .box-az { fill: var(--surface); stroke: var(--azure); stroke-width: 1.5; }
+  .arch .ext { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.4; }
+  .arch .chip { stroke-width: 1.2; }
+  .arch .line { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+  .arch .line-main { stroke: var(--azure); stroke-width: 3; fill: none; }
+  .arch .line-dash { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+  .arch .packet { fill: var(--azure); }
+  .arch .ah { fill: var(--muted); }
+  .arch .ah-main { fill: var(--azure); }
+  @media (prefers-reduced-motion: reduce) { .arch .packet { display: none; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .85rem; color: var(--muted); margin-top: 10px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  /* ---------- Resource cards ---------- */
+  .res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .res {
+    background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--c);
+    border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .res .top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .ico {
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: none;
+    background: var(--cs); color: var(--c);
+  }
+  .ico svg { width: 20px; height: 20px; }
+  .res h4 { margin: 0; font-size: 1rem; line-height: 1.25; }
+  .res .name { font-family: "Cascadia Code", Consolas, monospace; font-size: .8rem; color: var(--muted); }
+  .res ul { margin: 8px 0 0; padding-left: 18px; font-size: .9rem; }
+  .res li { margin: 2px 0; }
+  .res .why { margin: 8px 0 0; font-size: .88rem; color: var(--muted); }
+  .kept { display: flex; flex-wrap: wrap; gap: 10px; }
+  .kept div {
+    flex: 1 1 200px; border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px;
+    background: var(--surface);
+  }
+  .kept b { display: block; font-size: .95rem; }
+  .kept span { font-size: .85rem; color: var(--muted); }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline { display: flex; gap: 0; margin: 18px 0; flex-wrap: wrap; }
+  .stage {
+    flex: 1 1 170px; position: relative; padding: 16px 18px 16px 30px; color: #fff;
+    background: var(--c); clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%, 18px 50%);
+    margin-right: -10px; min-height: 120px;
+  }
+  .stage:first-child { clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%); padding-left: 18px; }
+  .stage .n { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; opacity: .85; }
+  .stage b { display: block; font-size: 1.1rem; }
+  .stage p { margin: 4px 0 0; font-size: .82rem; opacity: .95; line-height: 1.4; padding-right: 12px; }
+  .stage .gate {
+    display: inline-block; margin-top: 6px; background: rgba(255,255,255,.22); border-radius: 999px;
+    padding: 1px 9px; font-size: .74rem; font-weight: 600;
+  }
+  @media (max-width: 700px) {
+    .stage, .stage:first-child { clip-path: none; border-radius: 10px; margin: 0 0 8px; flex-basis: 100%; padding-left: 18px; min-height: 0; }
+  }
+  .callout {
+    display: flex; gap: 14px; align-items: flex-start; border-radius: var(--radius); padding: 16px 18px;
+    background: var(--cs, var(--azure-soft)); border: 1px solid var(--c, var(--azure)); margin: 16px 0;
+  }
+  .callout .ico { background: var(--c, var(--azure)); color: #fff; }
+  .callout p { margin: 0; }
+
+  /* Build once, promote */
+  .promote { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .img-chip {
+    font-family: "Cascadia Code", Consolas, monospace; font-size: .8rem; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px;
+  }
+  .env-pill { color: #fff; border-radius: 999px; padding: 3px 12px; font-size: .85rem; font-weight: 600; }
+  .arrow-r { color: var(--muted); font-size: 1.2rem; }
+
+  /* ---------- AKS ---------- */
+  .pools { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .pool { border: 2px solid var(--c); border-radius: var(--radius); padding: 16px; background: var(--surface); }
+  .pool h4 { margin: 0; color: var(--c); }
+  .pool .spec { font-size: .86rem; color: var(--muted); margin-bottom: 12px; }
+  .nodes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .node {
+    width: 64px; height: 74px; border-radius: 10px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: .7rem; gap: 4px;
+  }
+  .node.on { background: var(--c); color: #fff; }
+  .node.off { border: 2px dashed var(--c); color: var(--c); opacity: .7; }
+  .node svg { width: 26px; height: 26px; }
+  .pool .note-sm { font-size: .82rem; color: var(--muted); margin-top: 10px; }
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 14px; }
+  .feat { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .feat b { display: block; font-size: .95rem; }
+  .feat span { font-size: .85rem; color: var(--muted); }
+
+  /* ---------- Namespaces ---------- */
+  .cluster-box {
+    border: 2px solid var(--k8s); border-radius: 18px; padding: 18px; background: var(--k8s-soft);
+    position: relative;
+  }
+  .cluster-box .ctitle { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--k8s); margin-bottom: 14px; }
+  .ns-group { margin-bottom: 14px; }
+  .ns-group:last-child { margin-bottom: 0; }
+  .ns-group .gl { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  .ns-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+  .ns {
+    background: var(--surface); border-radius: 12px; padding: 12px 14px; border-left: 5px solid var(--c);
+  }
+  .ns b { font-family: "Cascadia Code", Consolas, monospace; font-size: .88rem; display: block; color: var(--c); }
+  .ns span { font-size: .84rem; color: var(--muted); }
+  .pods { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .pod { width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
+  .pod.opt { background: transparent; border: 2px dashed var(--c); }
+
+  /* ---------- Helm env comparison ---------- */
+  .cmp { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .92rem; }
+  .cmp th, .cmp td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .cmp th { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .cmp th.dev { color: var(--dev); } .cmp th.qa { color: var(--qa); } .cmp th.prod { color: var(--prod); }
+  .cmp tr:last-child td { border-bottom: none; }
+  .dots { display: inline-flex; gap: 4px; align-items: center; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+  .dot.opt { background: transparent; border: 2px dashed var(--c); }
+  .dots small { color: var(--muted); margin-left: 6px; }
+  .yes { color: var(--good); font-weight: 700; } .no { color: var(--muted); }
+  .releases { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+  .release { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .release b { font-family: "Cascadia Code", Consolas, monospace; font-size: .9rem; }
+  .release .nsl { display: inline-block; font-size: .74rem; background: var(--cs); color: var(--c); border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
+  .release span { display: block; font-size: .82rem; color: var(--muted); margin-top: 4px; }
+
+  pre {
+    background: var(--code-bg); color: var(--code-text); border-radius: var(--radius); padding: 16px 18px;
+    overflow-x: auto; font: .85rem/1.6 "Cascadia Code", ui-monospace, Consolas, monospace; margin: 14px 0;
+  }
+  pre .c { color: #7f8cab; } pre .k { color: #8fd3ff; } pre .f { color: #ffcf7a; }
+  .flags { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .flag { border-radius: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); }
+  .flag code { background: var(--k8s-soft); color: var(--k8s); font-weight: 600; }
+  .flag p { margin: 6px 0 0; font-size: .86rem; color: var(--muted); }
+
+  /* ---------- Ingress routing ---------- */
+  .routes { display: grid; gap: 14px; }
+  .host { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .host-h { padding: 10px 16px; background: var(--c); color: #fff; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+  .host-h b { font-family: "Cascadia Code", Consolas, monospace; font-size: .9rem; }
+  .host-h span { font-size: .82rem; opacity: .9; }
+  .route { display: grid; grid-template-columns: minmax(130px, 200px) 40px 1fr; align-items: center; padding: 8px 16px; border-top: 1px solid var(--border); }
+  .route:first-of-type { border-top: none; }
+  .route code { justify-self: start; }
+  .route .ar { color: var(--muted); text-align: center; }
+  .svc { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: .92rem; }
+  .svc i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .route small { color: var(--muted); font-weight: 400; }
+
+  .tls-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 0; counter-reset: s; }
+  .tls-step { position: relative; padding: 14px 16px 14px 16px; background: var(--surface); border: 1px solid var(--border); }
+  .tls-step:first-child { border-radius: 12px 0 0 12px; }
+  .tls-step:last-child { border-radius: 0 12px 12px 0; }
+  @media (max-width: 760px) { .tls-step, .tls-step:first-child, .tls-step:last-child { border-radius: 12px; margin-bottom: 8px; } }
+  .tls-step::before {
+    counter-increment: s; content: counter(s); display: grid; place-items: center; width: 26px; height: 26px;
+    border-radius: 50%; background: var(--sec); color: #fff; font-weight: 700; font-size: .8rem; margin-bottom: 6px;
+  }
+  .tls-step b { display: block; font-size: .92rem; }
+  .tls-step span { font-size: .84rem; color: var(--muted); }
+  .issuers { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 12px; }
+  .issuer { border-radius: 12px; padding: 12px 14px; background: var(--cs); border: 1px solid var(--c); }
+  .issuer b { color: var(--c); font-family: "Cascadia Code", Consolas, monospace; font-size: .88rem; }
+  .issuer p { margin: 4px 0 0; font-size: .85rem; }
+
+  /* ---------- Reliability ---------- */
+  .rel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .rel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .rel .ico { margin-bottom: 10px; }
+  .rel h4 { margin: 0 0 4px; font-size: 1rem; }
+  .rel p { margin: 0; font-size: .88rem; color: var(--muted); }
+  .heal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 6px 0; }
+  .heal .st { text-align: center; font-size: .82rem; color: var(--muted); width: 120px; }
+  .heal .pp { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; }
+  .heal .p { width: 30px; height: 30px; border-radius: 8px; background: var(--good); }
+  .heal .p.dead { background: var(--bad); position: relative; }
+  .heal .p.dead::after { content: "✕"; color: #fff; position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; }
+  .heal .p.new { background: var(--good); animation: pop 2.4s ease-in-out infinite; }
+  @keyframes pop { 0%, 30% { opacity: .25; transform: scale(.7); } 60%, 100% { opacity: 1; transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .heal .p.new { animation: none; } }
+
+  /* ---------- HA ---------- */
+  .ha-list { display: grid; gap: 8px; }
+  .ha-row {
+    display: grid; grid-template-columns: 200px 120px 1fr; gap: 14px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-left: 6px solid var(--c);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  @media (max-width: 700px) { .ha-row { grid-template-columns: 1fr; gap: 4px; } }
+  .ha-row b { font-size: .95rem; }
+  .ha-row .what { font-size: .82rem; color: var(--muted); display: block; font-weight: 400; }
+  .badge { display: inline-block; font-size: .76rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--cs); color: var(--c); justify-self: start; }
+  .ha-row .fail { font-size: .87rem; }
+  .ha-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin: 8px 0 14px; }
+  .ha-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--c); margin-right: 6px; vertical-align: -1px; }
+
+  /* ---------- Uptime ---------- */
+  .bars { display: grid; gap: 12px; }
+  .bar-row { display: grid; grid-template-columns: 120px 1fr 150px; gap: 12px; align-items: center; }
+  @media (max-width: 600px) { .bar-row { grid-template-columns: 80px 1fr; } .bar-row .val { grid-column: 2; } }
+  .bar-row .lab { font-weight: 700; font-size: 1.05rem; }
+  .bar-row .lab small { display: block; font-weight: 400; font-size: .74rem; color: var(--muted); }
+  .track { height: 22px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 70%, #fff)); min-width: 6px; }
+  .bar-row .val { font-size: .88rem; }
+  .bar-row .val small { color: var(--muted); display: block; font-size: .78rem; }
+  .sla-trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .sla { border-radius: var(--radius); padding: 16px; background: var(--surface); border: 1px solid var(--border); text-align: center; }
+  .sla .big { font-size: 1.6rem; font-weight: 800; color: var(--c); }
+  .sla b { display: block; }
+  .sla span { font-size: .85rem; color: var(--muted); }
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 4px; font-size: 1.05rem; }
+  .chain .lk { border: 2px solid var(--c); color: var(--c); border-radius: 12px; padding: 8px 14px; font-weight: 700; text-align: center; line-height: 1.2; }
+  .chain .lk small { display: block; font-weight: 400; font-size: .74rem; color: var(--muted); }
+  .chain .op { color: var(--muted); font-weight: 700; }
+
+  /* ---------- Roadmap ---------- */
+  .road { position: relative; padding-left: 34px; }
+  .road::before { content: ""; position: absolute; left: 13px; top: 8px; bottom: 8px; width: 3px; background: linear-gradient(var(--good), var(--azure), var(--k8s)); border-radius: 3px; }
+  .road-item { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; }
+  .road-item::before {
+    content: attr(data-n); position: absolute; left: -34px; top: 12px; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface); border: 3px solid var(--azure); display: grid; place-items: center; font-size: .75rem; font-weight: 700; color: var(--azure);
+  }
+  .road-item b { font-size: .97rem; }
+  .road-item .gain { float: right; font-size: .78rem; font-weight: 700; color: var(--good); background: var(--good-soft); border-radius: 999px; padding: 2px 10px; margin-left: 10px; }
+  .road-item p { margin: 4px 0 0; font-size: .86rem; color: var(--muted); }
+
+  footer { border-top: 1px solid var(--border); padding-top: 18px; color: var(--muted); font-size: .88rem; }
+</style>
+</head>
+<body>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <div class="hero-inner">
+    <button class="theme-btn" id="themeBtn" type="button">Toggle theme</button>
+    <div class="eyebrow">CredPay · DevOps capstone</div>
+    <h1>Infrastructure on Azure</h1>
+    <p>How the cloud resources, the AKS cluster, namespaces, Helm and the ingress fit together, and what
+    the design gives you for reliability, high availability, redundancy and uptime.</p>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="num">1</div><div class="lbl">region · Canada Central</div></div>
+  <div class="stat"><div class="num">2 → 9</div><div class="lbl">nodes, autoscaled</div></div>
+  <div class="stat"><div class="num">3</div><div class="lbl">environments as namespaces</div></div>
+  <div class="stat"><div class="num">5</div><div class="lbl">Helm releases</div></div>
+  <div class="stat"><div class="num">10</div><div class="lbl">smoke tests per deploy</div></div>
+</div>
+
+<div class="layout">
+
+<!-- ===================== SIDE NAV ===================== -->
+<aside class="side">
+  <nav aria-label="Contents">
+    <a href="#overview"><span style="--c:var(--azure)">1</span>Big picture</a>
+    <a href="#azure"><span style="--c:var(--azure)">2</span>Azure resources</a>
+    <a href="#setup"><span style="--c:var(--azure)">3</span>CD pipeline</a>
+    <a href="#aks"><span style="--c:var(--k8s)">4</span>AKS cluster</a>
+    <a href="#namespaces"><span style="--c:var(--k8s)">5</span>Namespaces</a>
+    <a href="#helm"><span style="--c:var(--k8s)">6</span>Helm</a>
+    <a href="#ingress"><span style="--c:var(--sec)">7</span>Ingress &amp; TLS</a>
+    <a href="#reliability"><span style="--c:var(--good)">8</span>Reliability</a>
+    <a href="#ha"><span style="--c:var(--good)">9</span>HA &amp; redundancy</a>
+    <a href="#uptime"><span style="--c:var(--good)">10</span>Uptime</a>
+    <a href="#enterprise"><span style="--c:var(--obs)">11</span>Production grade</a>
+    <a href="#commands"><span style="--c:var(--obs)">12</span>Commands</a>
+  </nav>
+</aside>
+
+<main>
+
+<!-- ===================== 1. OVERVIEW ===================== -->
+<section id="overview">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--azure)">1</div>
+    <div><h2>The big picture</h2><div class="sub">One region, one cluster, three environments</div></div></div>
+
+  <p>CredPay runs on <b>one AKS cluster</b> in <b>Canada Central</b>. Dev, qa and prod are
+  <b>namespaces</b> in that cluster and share <b>one PostgreSQL server</b>, where each environment has
+  its own databases. This keeps the cost classroom-friendly while still showing how real teams separate
+  environments and promote one build to production.</p>
+
+  <div class="panel scroll-x">
+    <svg class="arch" viewBox="0 0 1000 560" role="img" aria-label="Architecture: users reach the static IP and Traefik in AKS, which serves the CredPay namespaces; AKS uses PostgreSQL, Key Vault and Log Analytics, and pulls images from ACR">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="ah-main" d="M0 0L10 5L0 10z"/></marker>
+      </defs>
+
+      <!-- Users -->
+      <rect class="ext" x="14" y="196" width="122" height="92" rx="14"/>
+      <circle cx="75" cy="226" r="13" fill="none" stroke="var(--muted)" stroke-width="2"/>
+      <path d="M52 266c4-14 14-20 23-20s19 6 23 20" fill="none" stroke="var(--muted)" stroke-width="2"/>
+      <text x="75" y="282" text-anchor="middle" font-size="12" font-weight="600">Users</text>
+
+      <!-- Azure DevOps -->
+      <rect class="ext" x="14" y="398" width="122" height="104" rx="14"/>
+      <text x="75" y="428" text-anchor="middle" font-size="13" font-weight="700">Azure DevOps</text>
+      <text x="75" y="448" text-anchor="middle" font-size="11" class="t-muted">CI · CD · PR</text>
+      <text x="75" y="466" text-anchor="middle" font-size="11" class="t-muted">Terraform</text>
+      <text x="75" y="484" text-anchor="middle" font-size="11" class="t-muted">Helm</text>
+
+      <!-- Region -->
+      <rect class="region" x="160" y="14" width="826" height="532" rx="22"/>
+      <text x="182" y="40" font-size="13" font-weight="700" fill="var(--azure)" style="fill:var(--azure)">Azure · Canada Central</text>
+
+      <!-- rg-credpay -->
+      <rect class="rg" x="178" y="54" width="586" height="476" rx="18"/>
+      <text x="196" y="78" font-size="13" font-weight="700">rg-credpay</text>
+      <text x="282" y="78" font-size="11" class="t-muted">created by Terraform</text>
+
+      <!-- VNet -->
+      <rect class="vnet" x="194" y="92" width="554" height="300" rx="14"/>
+      <text x="210" y="112" font-size="11" class="t-muted">vnet-credpay · 10.0.0.0/16 · snet-aks 10.0.0.0/20</text>
+
+      <!-- Static IP / LB -->
+      <rect class="box-az" x="210" y="190" width="112" height="100" rx="12"/>
+      <text x="266" y="222" text-anchor="middle" font-size="12" font-weight="700">Static IP</text>
+      <text x="266" y="240" text-anchor="middle" font-size="11" class="t-muted">+ Standard</text>
+      <text x="266" y="256" text-anchor="middle" font-size="11" class="t-muted">Load Balancer</text>
+      <text x="266" y="276" text-anchor="middle" font-size="10" class="t-muted">20.151.112.52</text>
+
+      <!-- AKS -->
+      <rect class="aks" x="344" y="126" width="390" height="252" rx="14"/>
+      <text x="360" y="148" font-size="13" font-weight="700" style="fill:var(--k8s)">aks-credpay</text>
+      <text x="462" y="148" font-size="11" class="t-muted">2–5 system + 0–4 user nodes</text>
+
+      <!-- namespace chips -->
+      <g font-size="11" font-weight="600">
+        <rect class="chip" x="360" y="164" width="112" height="34" rx="8" style="fill:var(--surface);stroke:var(--sec)"/>
+        <text x="416" y="185" text-anchor="middle">traefik</text>
+        <rect class="chip" x="482" y="164" width="112" height="34" rx="8" style="fill:var(--surface);stroke:var(--sec)"/>
+        <text x="538" y="185" text-anchor="middle">cert-manager</text>
+        <rect class="chip" x="604" y="164" width="116" height="34" rx="8" style="fill:var(--surface);stroke:var(--obs)"/>
+        <text x="662" y="185" text-anchor="middle">monitoring</text>
+
+        <rect class="chip" x="360" y="214" width="112" height="70" rx="8" style="fill:var(--surface);stroke:var(--dev);stroke-width:2"/>
+        <text x="416" y="236" text-anchor="middle" style="fill:var(--dev)">credpay-dev</text>
+        <rect class="chip" x="482" y="214" width="112" height="70" rx="8" style="fill:var(--surface);stroke:var(--qa);stroke-width:2"/>
+        <text x="538" y="236" text-anchor="middle" style="fill:var(--qa)">credpay-qa</text>
+        <rect class="chip" x="604" y="214" width="116" height="70" rx="8" style="fill:var(--surface);stroke:var(--prod);stroke-width:2"/>
+        <text x="662" y="236" text-anchor="middle" style="fill:var(--prod)">credpay-prod</text>
+      </g>
+      <!-- pods in namespaces -->
+      <g>
+        <circle cx="386" cy="262" r="6" style="fill:var(--dev)"/><circle cx="402" cy="262" r="6" style="fill:var(--dev)"/><circle cx="418" cy="262" r="6" style="fill:var(--dev)"/><circle cx="434" cy="262" r="6" style="fill:var(--dev)"/><circle cx="450" cy="262" r="6" style="fill:var(--dev)"/>
+        <circle cx="508" cy="262" r="6" style="fill:var(--qa)"/><circle cx="524" cy="262" r="6" style="fill:var(--qa)"/><circle cx="540" cy="262" r="6" style="fill:var(--qa)"/><circle cx="556" cy="262" r="6" style="fill:var(--qa)"/><circle cx="572" cy="262" r="6" style="fill:var(--qa)"/>
+        <circle cx="620" cy="255" r="5" style="fill:var(--prod)"/><circle cx="634" cy="255" r="5" style="fill:var(--prod)"/><circle cx="648" cy="255" r="5" style="fill:var(--prod)"/><circle cx="662" cy="255" r="5" style="fill:var(--prod)"/><circle cx="676" cy="255" r="5" style="fill:var(--prod)"/><circle cx="690" cy="255" r="5" style="fill:var(--prod)"/><circle cx="704" cy="255" r="5" style="fill:var(--prod)"/>
+        <circle cx="620" cy="270" r="5" style="fill:var(--prod)"/><circle cx="634" cy="270" r="5" style="fill:var(--prod)"/><circle cx="648" cy="270" r="5" style="fill:var(--prod)"/><circle cx="662" cy="270" r="5" style="fill:var(--prod)"/>
+      </g>
+
+      <rect class="chip" x="360" y="300" width="112" height="34" rx="8" style="fill:var(--surface);stroke:var(--obs)"/>
+      <text x="416" y="321" text-anchor="middle" font-size="11" font-weight="600">dynatrace</text>
+      <rect class="chip" x="482" y="300" width="238" height="34" rx="8" style="fill:var(--surface);stroke:var(--border)"/>
+      <text x="601" y="321" text-anchor="middle" font-size="11" font-weight="600">kube-system · metrics-server · CoreDNS</text>
+      <text x="539" y="362" text-anchor="middle" font-size="11" class="t-muted">Entra ID sign-in · Azure RBAC · auto-upgrade (stable)</text>
+
+      <!-- Data services -->
+      <rect class="box-data" x="194" y="410" width="176" height="100" rx="12"/>
+      <text x="282" y="438" text-anchor="middle" font-size="12" font-weight="700">PostgreSQL 17</text>
+      <text x="282" y="456" text-anchor="middle" font-size="11" class="t-muted">psql-credpay · B2s</text>
+      <text x="282" y="472" text-anchor="middle" font-size="11" class="t-muted">6 databases · TLS</text>
+      <text x="282" y="488" text-anchor="middle" font-size="11" class="t-muted">7-day backups</text>
+
+      <rect class="box-sec" x="384" y="410" width="176" height="100" rx="12"/>
+      <text x="472" y="438" text-anchor="middle" font-size="12" font-weight="700">Key Vault</text>
+      <text x="472" y="456" text-anchor="middle" font-size="11" class="t-muted">kv-credpay-3297</text>
+      <text x="472" y="472" text-anchor="middle" font-size="11" class="t-muted">DB · Keycloak · Grafana</text>
+      <text x="472" y="488" text-anchor="middle" font-size="11" class="t-muted">Slack · Dynatrace · OpenAI</text>
+
+      <rect class="box-obs" x="574" y="410" width="174" height="100" rx="12"/>
+      <text x="661" y="438" text-anchor="middle" font-size="12" font-weight="700">Log Analytics</text>
+      <text x="661" y="456" text-anchor="middle" font-size="11" class="t-muted">log-credpay</text>
+      <text x="661" y="472" text-anchor="middle" font-size="11" class="t-muted">Container Insights</text>
+      <text x="661" y="488" text-anchor="middle" font-size="11" class="t-muted">30-day retention</text>
+
+      <!-- Outside Terraform -->
+      <text x="876" y="78" text-anchor="middle" font-size="11" class="t-muted">kept on destroy</text>
+      <rect class="box" x="790" y="92" width="174" height="80" rx="12"/>
+      <text x="877" y="122" text-anchor="middle" font-size="12" font-weight="700">ACR</text>
+      <text x="877" y="140" text-anchor="middle" font-size="11" class="t-muted">creddemoacr</text>
+      <text x="877" y="156" text-anchor="middle" font-size="11" class="t-muted">container images</text>
+
+      <rect class="box" x="790" y="188" width="174" height="80" rx="12"/>
+      <text x="877" y="218" text-anchor="middle" font-size="12" font-weight="700">SonarQube VM</text>
+      <text x="877" y="236" text-anchor="middle" font-size="11" class="t-muted">code quality gate</text>
+      <text x="877" y="252" text-anchor="middle" font-size="11" class="t-muted">used by CI</text>
+
+      <rect class="box" x="790" y="284" width="174" height="80" rx="12"/>
+      <text x="877" y="314" text-anchor="middle" font-size="12" font-weight="700">Azure OpenAI</text>
+      <text x="877" y="332" text-anchor="middle" font-size="11" class="t-muted">AIOps · Ask CredAI</text>
+      <text x="877" y="348" text-anchor="middle" font-size="11" class="t-muted">rg-credpay-ai</text>
+
+      <rect class="box" x="790" y="410" width="174" height="100" rx="12"/>
+      <text x="877" y="440" text-anchor="middle" font-size="12" font-weight="700">Terraform state</text>
+      <text x="877" y="458" text-anchor="middle" font-size="11" class="t-muted">credpaytfstate3297</text>
+      <text x="877" y="474" text-anchor="middle" font-size="11" class="t-muted">Azure Storage</text>
+
+      <!-- Lines -->
+      <path id="reqpath" class="line-main" d="M136 242 H208" marker-end="url(#ahm)"/>
+      <path class="line-main" d="M322 240 H342" marker-end="url(#ahm)"/>
+      <path class="line" d="M356 378 V408" marker-end="url(#ah)"/>
+      <path class="line-dash" d="M472 408 V380" marker-end="url(#ah)"/>
+      <path class="line-dash" d="M661 380 V408" marker-end="url(#ah)"/>
+      <path class="line" d="M790 132 H760 V200 H736" marker-end="url(#ah)"/>
+      <path class="line" d="M736 280 H760 V324 H788" marker-end="url(#ah)"/>
+      <path class="line-dash" d="M136 440 H164" marker-end="url(#ah)"/>
+      <text x="778" y="124" font-size="10" class="t-muted" text-anchor="end">pull</text>
+      <text x="150" y="432" font-size="10" class="t-muted" text-anchor="middle">deploys</text>
+
+      <!-- animated request packet -->
+      <circle class="packet" r="5">
+        <animateMotion dur="2.6s" repeatCount="indefinite" path="M136 242 H330 H420 V250"/>
+      </circle>
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--azure)"></i>Azure networking</span>
+      <span><i style="background:var(--k8s)"></i>Kubernetes</span>
+      <span><i style="background:var(--data)"></i>Data</span>
+      <span><i style="background:var(--sec)"></i>Security / ingress</span>
+      <span><i style="background:var(--obs)"></i>Observability</span>
+      <span><i style="background:var(--dev)"></i>dev</span>
+      <span><i style="background:var(--qa)"></i>qa</span>
+      <span><i style="background:var(--prod)"></i>prod</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 2. AZURE ===================== -->
+<section id="azure">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--azure)">2</div>
+    <div><h2>Azure resources</h2><div class="sub">What Terraform creates, and what it leaves alone</div></div></div>
+
+  <div class="res-grid">
+    <div class="res" style="--c:var(--k8s);--cs:var(--k8s-soft)">
+      <div class="top"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5"/></svg></div>
+        <div><h4>AKS cluster</h4><div class="name">aks-credpay</div></div></div>
+      <ul><li>System pool 2–5 × D2alds_v6</li><li>User pool 0–4 × D2s_v6</li><li>Node RG <code>rg-credpay-aks-nodes</code></li></ul>
+      <p class="why">Runs every container. Details in section 4.</p>
+    </div>
+    <div class="res" style="--c:var(--azure);--cs:var(--azure-soft)">
+      <div class="top"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11l9.4-5M7.3 13l9.4 5"/></svg></div>
+        <div><h4>Virtual network</h4><div class="name">vnet-credpay · 10.0.0.0/16</div></div></div>
+      <ul><li><code>snet-aks</code> 10.0.0.0/20 · 4,096 IPs</li><li><code>snet-postgres</code> 10.0.16.0/24 (reserved)</li></ul>
+      <p class="why">Azure CNI gives every pod a VNet IP, hence the big subnet.</p>
+    </div>
+    <div class="res" style="--c:var(--azure);--cs:var(--azure-soft)">
+      <div class="top"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></div>
+        <div><h4>Static public IP</h4><div class="name">pip-credpay-ingress</div></div></div>
+      <ul><li>Standard SKU, static</li><li>Attached to Traefik's load balancer</li></ul>
+      <p class="why">Stays the same when Traefik is reinstalled, so DNS keeps working.</p>
+    </div>
+    <div class="res" style="--c:var(--data);--cs:var(--data-soft)">
+      <div class="top"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div>
+        <div><h4>PostgreSQL Flexible Server</h4><div class="name">psql-credpay</div></div></div>
+      <ul><li>v17 · B_Standard_B2s · 32 GiB</li><li><code>credpay_&lt;env&gt;</code> + <code>keycloak_&lt;env&gt;</code></li><li>TLS required · 7-day backups</li></ul>
+      <p class="why">Managed: Azure patches it and takes the backups.</p>
+    </div>
+    <div class="res" style="--c:var(--sec);--cs:var(--sec-soft)">
+      <div class="top"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/><circle cx="12" cy="15.5" r="1.5"/></svg></div>
+        <div><h4>Key Vault</h4><div class="name">kv-credpay-3297</div></div></div>
+      <ul><li>RBAC mode · soft delete 7 days</li><li>Generated DB, Keycloak, Grafana passwords</li><li>Your Slack / Dynatrace / OpenAI secrets</li></ul>
+      <p class="why">Purge protection off so it can be recreated with the same name.</p>
+    </div>
+    <div class="res" style="--c:var(--obs);--cs:var(--obs-soft)">
+      <div class="top"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20h18M6 16l4-5 3 3 5-7"/></svg></div>
+        <div><h4>Log Analytics</h4><div class="name">log-credpay</div></div></div>
+      <ul><li>Container Insights</li><li>30-day retention</li></ul>
+      <p class="why">Container logs and node metrics in the Azure portal.</p>
+    </div>
+  </div>
+
+  <div class="callout" style="--c:var(--sec);--cs:var(--sec-soft)">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 21c1-4 4-6 7-6s6 2 7 6M17 11l2 2 4-4"/></svg></div>
+    <p><b>No passwords for access.</b> Role assignments give the nodes <code>AcrPull</code>, and give the
+    pipeline plus everyone in <code>adminObjectIds</code> <i>AKS RBAC Cluster Admin</i> and <i>Key Vault
+    Secrets Officer</i>.</p>
+  </div>
+
+  <h3>Created once, outside Terraform: they survive a destroy</h3>
+  <div class="kept">
+    <div><b>ACR · creddemoacr</b><span>CI pushes images before any cluster exists.</span></div>
+    <div><b>Terraform state</b><span>Terraform can't create its own state storage; the pipeline does.</span></div>
+    <div><b>SonarQube VM</b><span>Used by CI, not by the running app.</span></div>
+    <div><b>Azure OpenAI</b><span>Optional; its key goes into Key Vault by hand.</span></div>
+  </div>
+</section>
+
+<!-- ===================== 3. SETUP ===================== -->
+<section id="setup">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--azure)">3</div>
+    <div><h2>How it is set up</h2><div class="sub">Nobody clicks in the portal: <code>credpay-cd</code> builds everything</div></div></div>
+
+  <div class="pipeline">
+    <div class="stage" style="--c:#0f6cbd"><div class="n">Stage 1</div><b>Infra</b><p>Terraform plan, apply only when something changed</p></div>
+    <div class="stage" style="--c:#5b4fd6"><div class="n">Stage 2</div><b>Platform</b><p>Traefik, cert-manager, Prometheus, Grafana, Dynatrace</p></div>
+    <div class="stage" style="--c:#1f8a4c"><div class="n">Stage 3</div><b>DEV</b><p>Helm deploy + smoke tests; records the image list</p><span class="gate">automatic</span></div>
+    <div class="stage" style="--c:#c27c0e"><div class="n">Stage 4</div><b>QA</b><p>Same images as dev</p><span class="gate">approval</span></div>
+    <div class="stage" style="--c:#c4312a"><div class="n">Stage 5</div><b>PROD</b><p>Same images; HPA, PDBs, monitoring, AIOps</p><span class="gate">approval</span></div>
+  </div>
+
+  <div class="panel">
+    <b>Build once, promote.</b> CI builds each image one time. Dev picks the tags, qa and prod reuse that exact list:
+    <div class="promote">
+      <span class="img-chip">user-service:1.0.123</span><span class="arrow-r">→</span>
+      <span class="env-pill" style="background:var(--dev)">dev</span><span class="arrow-r">→</span>
+      <span class="env-pill" style="background:var(--qa)">qa</span><span class="arrow-r">→</span>
+      <span class="env-pill" style="background:var(--prod)">prod</span>
+      <span style="color:var(--muted);font-size:.88rem">same bytes everywhere: prod never runs untested code</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3M18 3v4h-4M6 21v-4h4"/></svg></div>
+    <p><b>Safe to re-run.</b> Terraform applies nothing when nothing changed, and every Helm step is
+    <code>upgrade --install</code>. Running the pipeline with <b>Destroy all Azure infrastructure</b> ticked
+    instead uninstalls Traefik (releasing the IP) and runs <code>terraform destroy</code>.</p>
+  </div>
+</section>
+
+<!-- ===================== 4. AKS ===================== -->
+<section id="aks">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--k8s)">4</div>
+    <div><h2>AKS cluster configuration</h2><div class="sub">Two autoscaling node pools, Entra ID sign-in, automatic patching</div></div></div>
+
+  <div class="pools">
+    <div class="pool" style="--c:var(--k8s)">
+      <h4>system pool</h4>
+      <div class="spec">Standard_D2alds_v6 · 2 vCPU · 4 GiB · max 60 pods/node</div>
+      <div class="nodes">
+        <div class="node on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>node 1</div>
+        <div class="node on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>node 2</div>
+        <div class="node off">+3</div><div class="node off">+4</div><div class="node off">+5</div>
+      </div>
+      <div class="note-sm">Always 2 running (solid): one can fail or be upgraded while the other serves. The autoscaler adds up to 3 more (dashed).</div>
+    </div>
+    <div class="pool" style="--c:var(--data)">
+      <h4>user pool</h4>
+      <div class="spec">Standard_D2s_v6 · 2 vCPU · 8 GiB</div>
+      <div class="nodes">
+        <div class="node off">+1</div><div class="node off">+2</div><div class="node off">+3</div><div class="node off">+4</div>
+      </div>
+      <div class="note-sm">Starts at <b>0 nodes</b>, so it costs nothing until the autoscaler needs room (for example Dynatrace agents or more HPA pods).</div>
+    </div>
+  </div>
+
+  <div class="feat-grid">
+    <div class="feat"><div class="ico" style="--c:var(--k8s);--cs:var(--k8s-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+      <div><b>Auto-upgrade</b><span>Kubernetes on the <code>stable</code> channel, node images weekly. Surge 33%: a new node joins before an old one drains.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--azure);--cs:var(--azure-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11l9.4-5M7.3 13l9.4 5"/></svg></div>
+      <div><b>Azure CNI + network policy</b><span>Pods get VNet IPs; services use <code>10.240.0.0/16</code> so they never overlap.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--sec);--cs:var(--sec-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></div>
+      <div><b>Entra ID + Azure RBAC</b><span>Local admin certificate disabled. People and the pipeline sign in with Entra ID and need a role.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--sec);--cs:var(--sec-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.6 7.6a5.5 5.5 0 11-7.8 7.8 5.5 5.5 0 017.8-7.8zM15.5 7.5l3 3L22 7l-3-3"/></svg></div>
+      <div><b>Managed identity</b><span>No service principal secrets. OIDC issuer + Workload Identity ready for the Key Vault CSI driver.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--data);--cs:var(--data-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg></div>
+      <div><b>ACR pull</b><span>Nodes pull from <code>creddemoacr</code> with <code>AcrPull</code>; no image-pull secret.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--obs);--cs:var(--obs-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20h18M6 16l4-5 3 3 5-7"/></svg></div>
+      <div><b>Built-in add-ons</b><span>metrics-server (for the HPA), CoreDNS, Azure Disk CSI, Container Insights.</span></div></div>
+  </div>
+
+  <div class="callout" style="--c:var(--warn);--cs:var(--warn-soft)">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg></div>
+    <p><b>Accepted risk:</b> the API server accepts connections from any IP, because Microsoft-hosted
+    pipeline agents have changing IPs. Access still needs an Entra ID login and an Azure role. It is
+    documented in <code>terraform/modules/aks/main.tf</code> with a review date.</p>
+  </div>
+</section>
+
+<!-- ===================== 5. NAMESPACES ===================== -->
+<section id="namespaces">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--k8s)">5</div>
+    <div><h2>Namespaces</h2><div class="sub">Each environment is isolated, with its own secrets, config and databases</div></div></div>
+
+  <div class="cluster-box">
+    <div class="ctitle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7z"/></svg>aks-credpay</div>
+
+    <div class="ns-group"><div class="gl">Applications · one Helm release each</div>
+      <div class="ns-row">
+        <div class="ns" style="--c:var(--dev)"><b>credpay-dev</b><span>Every merge lands here</span>
+          <div class="pods"><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i></div></div>
+        <div class="ns" style="--c:var(--qa)"><b>credpay-qa</b><span>After approval, smaller requests</span>
+          <div class="pods"><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i></div></div>
+        <div class="ns" style="--c:var(--prod)"><b>credpay-prod</b><span>HPA, 2 portals, PDBs, alerts, ai-service</span>
+          <div class="pods"><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod opt"></i><i class="pod opt"></i><i class="pod opt"></i><i class="pod opt"></i></div></div>
+      </div>
+    </div>
+    <div class="ns-group"><div class="gl">Platform</div>
+      <div class="ns-row">
+        <div class="ns" style="--c:var(--sec)"><b>traefik</b><span>Ingress controller, the only public entry</span></div>
+        <div class="ns" style="--c:var(--sec)"><b>cert-manager</b><span>Issues and renews TLS certificates</span></div>
+        <div class="ns" style="--c:var(--obs)"><b>monitoring</b><span>Prometheus, Grafana, Alertmanager → Slack</span></div>
+        <div class="ns" style="--c:var(--obs)"><b>dynatrace</b><span>Operator + OneAgent (when configured)</span></div>
+        <div class="ns" style="--c:var(--muted)"><b>kube-system</b><span>AKS: CoreDNS, metrics-server, CSI</span></div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:.85rem;color:var(--muted)">Dots are pods. Dashed dots are extra pods the HPA can add in prod.</p>
+
+  <div class="feat-grid">
+    <div class="feat"><div class="ico" style="--c:var(--sec);--cs:var(--sec-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div>
+      <div><b>Pod Security: restricted</b><span>Namespaces are labelled so Kubernetes rejects root containers, privilege escalation and extra Linux capabilities.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--sec);--cs:var(--sec-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
+      <div><b>Own secrets per environment</b><span><code>credpay-db</code>, <code>keycloak-admin</code>, prod's <code>credpay-aiops</code>: copied from Key Vault by the pipeline.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--obs);--cs:var(--obs-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+      <div><b>Observability on prod</b><span>Only <code>credpay-prod</code> is scraped, alerted on and injected by Dynatrace, which keeps dev and qa light.</span></div></div>
+  </div>
+</section>
+
+<!-- ===================== 6. HELM ===================== -->
+<section id="helm">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--k8s)">6</div>
+    <div><h2>Helm releases and the CredPay chart</h2><div class="sub">One chart, three environments: only the values differ</div></div></div>
+
+  <div class="releases">
+    <div class="release" style="--c:var(--sec);--cs:var(--sec-soft)"><b>traefik</b><span class="nsl">traefik</span><span>traefik/traefik</span></div>
+    <div class="release" style="--c:var(--sec);--cs:var(--sec-soft)"><b>cert-manager</b><span class="nsl">cert-manager</span><span>jetstack/cert-manager</span></div>
+    <div class="release" style="--c:var(--obs);--cs:var(--obs-soft)"><b>monitoring</b><span class="nsl">monitoring</span><span>kube-prometheus-stack</span></div>
+    <div class="release" style="--c:var(--obs);--cs:var(--obs-soft)"><b>dynatrace-operator</b><span class="nsl">dynatrace</span><span>Dynatrace Operator (OCI)</span></div>
+    <div class="release" style="--c:var(--k8s);--cs:var(--k8s-soft)"><b>credpay</b><span class="nsl">×3 envs</span><span>charts/credpay (ours)</span></div>
+  </div>
+
+  <h3>Same chart, different values</h3>
+  <div class="panel scroll-x">
+    <table class="cmp">
+      <thead><tr><th>Component</th><th class="dev">dev</th><th class="qa">qa</th><th class="prod">prod</th></tr></thead>
+      <tbody>
+        <tr><td>user-service<br>payment-service</td>
+          <td><span class="dots" style="--c:var(--dev)"><i class="dot"></i><small>1</small></span></td>
+          <td><span class="dots" style="--c:var(--qa)"><i class="dot"></i><small>1</small></span></td>
+          <td><span class="dots" style="--c:var(--prod)"><i class="dot"></i><i class="dot"></i><i class="dot opt"></i><i class="dot opt"></i><small>HPA 2–4 at 70% CPU</small></span></td></tr>
+        <tr><td>customer-portal<br>admin-portal</td>
+          <td><span class="dots" style="--c:var(--dev)"><i class="dot"></i><small>1</small></span></td>
+          <td><span class="dots" style="--c:var(--qa)"><i class="dot"></i><small>1</small></span></td>
+          <td><span class="dots" style="--c:var(--prod)"><i class="dot"></i><i class="dot"></i><small>2</small></span></td></tr>
+        <tr><td>keycloak</td>
+          <td><span class="dots" style="--c:var(--dev)"><i class="dot"></i><small>1</small></span></td>
+          <td><span class="dots" style="--c:var(--qa)"><i class="dot"></i><small>1 · smaller</small></span></td>
+          <td><span class="dots" style="--c:var(--prod)"><i class="dot"></i><small>1</small></span></td></tr>
+        <tr><td>ai-service</td><td class="no">–</td><td class="no">–</td><td><span class="dots" style="--c:var(--prod)"><i class="dot"></i><small>1</small></span></td></tr>
+        <tr><td>PodDisruptionBudgets</td><td class="no">–</td><td class="no">–</td><td class="yes">✓ minAvailable 1</td></tr>
+        <tr><td>Monitors, alerts, dashboards</td><td class="no">–</td><td class="no">–</td><td class="yes">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>How a Helm deploy protects you</h3>
+<pre><span class="k">helm upgrade --install</span> credpay charts/credpay -n credpay-prod \
+  -f values-prod.yaml --set-string domain=... --set-string userService.image=... \
+  <span class="f">--atomic --wait</span> --timeout 15m <span class="f">--history-max 10</span></pre>
+  <div class="flags">
+    <div class="flag"><code>--wait</code><p>Done only when every pod passes its readiness probe.</p></div>
+    <div class="flag"><code>--atomic</code><p>Not Ready in 15 minutes? Helm <b>rolls back automatically</b>.</p></div>
+    <div class="flag"><code>--history-max 10</code><p>Keeps 10 releases for <code>helm rollback credpay &lt;rev&gt;</code>.</p></div>
+    <div class="flag"><code>checksum/config</code><p>A config change restarts the pods that read it.</p></div>
+  </div>
+
+  <div class="callout" style="--c:var(--sec);--cs:var(--sec-soft)">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
+    <p><b>Secrets never pass through Helm.</b> The pipeline copies them from Key Vault into Kubernetes
+    Secrets first. The chart refers to them by name only, so they never appear in values or in Helm's
+    release history.</p>
+  </div>
+</section>
+
+<!-- ===================== 7. INGRESS ===================== -->
+<section id="ingress">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--sec)">7</div>
+    <div><h2>Ingress, DNS and TLS</h2><div class="sub">One public IP, three hosts per environment, automatic HTTPS</div></div></div>
+
+  <div class="feat-grid">
+    <div class="feat"><div class="ico" style="--c:var(--sec);--cs:var(--sec-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div>
+      <div><b>Traefik</b><span>Reads standard Ingress resources. Chosen because ingress-nginx was retired in March 2026.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--azure);--cs:var(--azure-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg></div>
+      <div><b>Static IP</b><span>Annotation <code>azure-pip-name</code>; the pipeline fails if Traefik gets any other IP.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--good);--cs:var(--good-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg></div>
+      <div><b>HTTP → HTTPS</b><span>Port 80 permanently redirects to 443. <code>externalTrafficPolicy: Local</code> keeps the client IP.</span></div></div>
+  </div>
+
+  <h3>Host names without buying a domain</h3>
+  <p><a href="https://sslip.io">sslip.io</a> answers any name containing an IP with that IP:
+  <code>prod.<b>20-151-112-52</b>.sslip.io</code> → <code>20.151.112.52</code>. For a real domain, set
+  <code>baseDomain</code> in <code>credpay-cd.yml</code> and add DNS A records.</p>
+
+  <div class="routes">
+    <div class="host">
+      <div class="host-h" style="--c:var(--azure);background:var(--azure)"><b>&lt;env&gt;.&lt;domain&gt;</b><span>Customer site</span></div>
+      <div class="route"><code>/api/payment</code><span class="ar">→</span><span class="svc" style="--c:var(--data)"><i></i>payment-service <small>FastAPI</small></span></div>
+      <div class="route"><code>/api</code><span class="ar">→</span><span class="svc" style="--c:var(--k8s)"><i></i>user-service <small>Spring Boot</small></span></div>
+      <div class="route"><code>/</code><span class="ar">→</span><span class="svc" style="--c:var(--azure)"><i></i>customer-portal <small>React</small></span></div>
+    </div>
+    <div class="host">
+      <div class="host-h" style="background:var(--k8s)"><b>admin.&lt;env&gt;.&lt;domain&gt;</b><span>Admin site</span></div>
+      <div class="route"><code>/api/ai</code><span class="ar">→</span><span class="svc" style="--c:var(--obs)"><i></i>ai-service <small>prod only</small></span></div>
+      <div class="route"><code>/api/admin/payments</code><span class="ar">→</span><span class="svc" style="--c:var(--data)"><i></i>payment-service</span></div>
+      <div class="route"><code>/api/payment</code><span class="ar">→</span><span class="svc" style="--c:var(--data)"><i></i>payment-service</span></div>
+      <div class="route"><code>/api</code><span class="ar">→</span><span class="svc" style="--c:var(--k8s)"><i></i>user-service</span></div>
+      <div class="route"><code>/</code><span class="ar">→</span><span class="svc" style="--c:var(--azure)"><i></i>admin-portal <small>React</small></span></div>
+    </div>
+    <div class="host">
+      <div class="host-h" style="background:var(--sec)"><b>auth.&lt;env&gt;.&lt;domain&gt;</b><span>Login</span></div>
+      <div class="route"><code>/</code><span class="ar">→</span><span class="svc" style="--c:var(--sec)"><i></i>keycloak <small>OIDC</small></span></div>
+    </div>
+  </div>
+  <p style="font-size:.88rem;color:var(--muted)">The longest matching path wins, so <code>/api/payment</code> beats <code>/api</code>. Grafana is at <code>grafana.&lt;domain&gt;</code>.</p>
+
+  <h3>How the certificate is issued</h3>
+  <div class="tls-steps">
+    <div class="tls-step"><b>Ingress annotated</b><span><code>cert-manager.io/cluster-issuer</code></span></div>
+    <div class="tls-step"><b>cert-manager asks</b><span>Let's Encrypt for a certificate for the 3 hosts</span></div>
+    <div class="tls-step"><b>HTTP-01 challenge</b><span>Let's Encrypt fetches a token through Traefik</span></div>
+    <div class="tls-step"><b>Stored</b><span>in Secret <code>credpay-tls</code>; Traefik serves it</span></div>
+    <div class="tls-step"><b>Auto-renewed</b><span>before it expires, no action needed</span></div>
+  </div>
+  <div class="issuers">
+    <div class="issuer" style="--c:var(--good);--cs:var(--good-soft)"><b>letsencrypt-prod</b><p>Trusted (default). sslip.io shares a global limit of 50 a week, so it can occasionally fail.</p></div>
+    <div class="issuer" style="--c:var(--warn);--cs:var(--warn-soft)"><b>letsencrypt-staging</b><p>Same flow, untrusted test certificates, high limits.</p></div>
+    <div class="issuer" style="--c:var(--muted);--cs:var(--surface-2)"><b>selfsigned</b><p>No internet needed; browsers show a warning.</p></div>
+  </div>
+  <p style="font-size:.88rem;color:var(--muted)">If the certificate is not ready in 5 minutes the deploy doesn't fail: it warns, and the smoke tests skip the certificate check.</p>
+</section>
+
+<!-- ===================== 8. RELIABILITY ===================== -->
+<section id="reliability">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--good)">8</div>
+    <div><h2>Reliability</h2><div class="sub">Keep working correctly, and recover without a person</div></div></div>
+
+  <div class="panel">
+    <div class="heal" aria-label="Self-healing: a pod fails and Kubernetes replaces it">
+      <div class="st"><div class="pp"><span class="p"></span><span class="p"></span></div>2 healthy pods</div>
+      <span class="arrow-r">→</span>
+      <div class="st"><div class="pp"><span class="p dead"></span><span class="p"></span></div>one crashes; traffic goes to the other</div>
+      <span class="arrow-r">→</span>
+      <div class="st"><div class="pp"><span class="p new"></span><span class="p"></span></div>Kubernetes starts a replacement</div>
+    </div>
+  </div>
+
+  <div class="rel-grid">
+    <div class="rel"><div class="ico" style="--c:var(--good);--cs:var(--good-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+      <h4>Health probes</h4><p>Readiness: no traffic until ready. Liveness: restart if stuck. Startup probes give user-service and keycloak 3 and 5 minutes to boot.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--good);--cs:var(--good-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3M18 3v4h-4M6 21v-4h4"/></svg></div>
+      <h4>Self-healing</h4><p>Crashed pods are recreated; pods on a dead node move to healthy nodes.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--k8s);--cs:var(--k8s-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <h4>Rolling updates</h4><p>New pods must be Ready before old ones stop: no downtime with 2+ replicas.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--k8s);--cs:var(--k8s-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg></div>
+      <h4>Automatic rollback</h4><p><code>helm --atomic</code> returns to the previous release if the new one never becomes Ready.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--azure);--cs:var(--azure-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+      <h4>Requests and limits</h4><p>Every container declares CPU and memory, so no service can starve the others.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--azure);--cs:var(--azure-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg></div>
+      <h4>Autoscaling</h4><p>HPA: 2–4 pods for the prod APIs. Cluster autoscaler: 2–5 system and 0–4 user nodes.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--sec);--cs:var(--sec-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg></div>
+      <h4>Gates</h4><p>SonarQube and Trivy in CI, 10 smoke tests after every deploy, approvals before qa and prod.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--obs);--cs:var(--obs-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+      <h4>Detect and alert</h4><p>7 Prometheus alert rules → Slack. Dynatrace and the AIOps page help find the root cause.</p></div>
+    <div class="rel"><div class="ico" style="--c:var(--data);--cs:var(--data-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg></div>
+      <h4>Backups</h4><p>PostgreSQL: 7 days of point-in-time restore. State in Azure Storage, images in ACR.</p></div>
+  </div>
+
+  <div class="callout" style="--c:var(--good);--cs:var(--good-soft)">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/></svg></div>
+    <p><b>The 10 smoke tests</b> run through the real ingress. They check that HTTP redirects to HTTPS,
+    both portals are served and point at Keycloak, Keycloak publishes the right issuer, payment-service
+    answers, and the user, admin and payment APIs refuse calls without a login (401). One failure stops
+    the promotion.</p>
+  </div>
+</section>
+
+<!-- ===================== 9. HA ===================== -->
+<section id="ha">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--good)">9</div>
+    <div><h2>High availability and redundancy</h2><div class="sub">An honest look at every layer</div></div></div>
+
+  <p><b>High availability</b> means users can still use the app when a part fails.
+  <b>Redundancy</b> is how you get it: more than one copy of each part, so there is no
+  <i>single point of failure</i>.</p>
+
+  <div class="ha-legend">
+    <span><i style="--c:var(--good)"></i>Redundant</span>
+    <span><i style="--c:var(--warn)"></i>Single, recovers quickly</span>
+    <span><i style="--c:var(--bad)"></i>Single point of failure</span>
+  </div>
+
+  <div class="ha-list">
+    <div class="ha-row" style="--c:var(--good);--cs:var(--good-soft)"><b>Load balancer + IP<span class="what">Azure Standard LB</span></b><span class="badge">managed</span><span class="fail">Redundant inside Azure.</span></div>
+    <div class="ha-row" style="--c:var(--good);--cs:var(--good-soft)"><b>Nodes<span class="what">2–5 system, 0–4 user</span></b><span class="badge">redundant</span><span class="fail">Pods move to the other node. Not spread across availability zones.</span></div>
+    <div class="ha-row" style="--c:var(--good);--cs:var(--good-soft)"><b>Prod APIs<span class="what">2–4 pods + PDB</span></b><span class="badge">redundant</span><span class="fail">The other pod serves; a node drain never removes both.</span></div>
+    <div class="ha-row" style="--c:var(--good);--cs:var(--good-soft)"><b>Prod portals<span class="what">2 pods + PDB</span></b><span class="badge">redundant</span><span class="fail">The other pod serves.</span></div>
+    <div class="ha-row" style="--c:var(--warn);--cs:var(--warn-soft)"><b>Control plane<span class="what">run by Microsoft</span></b><span class="badge">free tier</span><span class="fail">Running pods keep serving; only deploys and scaling pause.</span></div>
+    <div class="ha-row" style="--c:var(--warn);--cs:var(--warn-soft)"><b>Traefik<span class="what">1 pod</span></b><span class="badge">single</span><span class="fail">All traffic stops until it restarts (seconds). Easy to raise to 2.</span></div>
+    <div class="ha-row" style="--c:var(--warn);--cs:var(--warn-soft)"><b>Keycloak<span class="what">1 pod</span></b><span class="badge">single</span><span class="fail">New logins fail for a few minutes; signed-in users keep working. More replicas need its cache cluster.</span></div>
+    <div class="ha-row" style="--c:var(--warn);--cs:var(--warn-soft)"><b>dev / qa<span class="what">1 pod each</span></b><span class="badge">by design</span><span class="fail">Short outage on restart; fine for test environments.</span></div>
+    <div class="ha-row" style="--c:var(--bad);--cs:var(--bad-soft)"><b>PostgreSQL<span class="what">1 server, no standby</span></b><span class="badge">SPOF</span><span class="fail">All environments stop until Azure recovers it. Data is safe in backups.</span></div>
+    <div class="ha-row" style="--c:var(--bad);--cs:var(--bad-soft)"><b>Region<span class="what">Canada Central only</span></b><span class="badge">SPOF</span><span class="fail">A region outage takes everything down; rebuild elsewhere with Terraform + CD.</span></div>
+  </div>
+
+  <div class="callout">
+    <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+    <p><b>Why this is fine for the course:</b> each step up (zones, an HA database, a second region)
+    roughly doubles part of the bill. This setup shows the <i>mechanisms</i>: replicas, PDBs, HPA, the
+    autoscaler, probes and rollback. Section 11 shows what a bank would add.</p>
+  </div>
+</section>
+
+<!-- ===================== 10. UPTIME ===================== -->
+<section id="uptime">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--good)">10</div>
+    <div><h2>Uptime</h2><div class="sub">Every extra "nine" cuts the allowed downtime by ten</div></div></div>
+
+  <div class="panel">
+    <b>Allowed downtime per month</b>
+    <div class="bars" style="margin-top:14px">
+      <div class="bar-row" style="--c:var(--bad)"><div class="lab">99%</div><div class="track"><div class="fill" style="width:100%"></div></div><div class="val">7 h 18 min<small>3.65 days / year</small></div></div>
+      <div class="bar-row" style="--c:var(--warn)"><div class="lab">99.9%<small>three nines</small></div><div class="track"><div class="fill" style="width:10%"></div></div><div class="val">43 min<small>8 h 46 min / year</small></div></div>
+      <div class="bar-row" style="--c:var(--azure)"><div class="lab">99.95%</div><div class="track"><div class="fill" style="width:5%"></div></div><div class="val">22 min<small>4 h 23 min / year</small></div></div>
+      <div class="bar-row" style="--c:var(--good)"><div class="lab">99.99%<small>four nines</small></div><div class="track"><div class="fill" style="width:1%"></div></div><div class="val">4 min 23 s<small>52 min / year</small></div></div>
+    </div>
+  </div>
+
+  <div class="sla-trio">
+    <div class="sla" style="--c:var(--azure)"><div class="big">SLI</div><b>What you measure</b><span>e.g. % of requests that succeed. Our error-rate and latency alerts are SLI-based.</span></div>
+    <div class="sla" style="--c:var(--k8s)"><div class="big">SLO</div><b>Your own target</b><span>e.g. 99.9% of payments succeed each month.</span></div>
+    <div class="sla" style="--c:var(--obs)"><div class="big">SLA</div><b>A promise with penalties</b><span>Azure pays service credits when it misses one.</span></div>
+  </div>
+
+  <h3>Parts in a chain multiply</h3>
+  <div class="chain">
+    <span class="lk" style="--c:var(--k8s)">99.9%<small>cluster</small></span><span class="op">×</span>
+    <span class="lk" style="--c:var(--data)">99.9%<small>database</small></span><span class="op">=</span>
+    <span class="lk" style="--c:var(--warn)">≈ 99.8%<small>~1.5 h / month</small></span>
+  </div>
+  <ul>
+    <li><b>AKS Free tier</b> (used here): no financially backed SLA for the control plane. <b>Standard
+    tier</b>: 99.9%, or 99.95% with availability zones.</li>
+    <li><b>PostgreSQL Flexible Server</b> without HA: 99.9%. With zone-redundant HA: 99.99%.</li>
+    <li>Redundancy at every layer (zones, HA database, more replicas) is how companies push the total above 99.9%.</li>
+  </ul>
+
+  <h3>How uptime is watched</h3>
+  <div class="feat-grid">
+    <div class="feat"><div class="ico" style="--c:var(--obs);--cs:var(--obs-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></div>
+      <div><b>Slack alerts</b><span><code>CredpayServiceDown</code>, <code>CredpayDeploymentUnavailable</code> within minutes.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--good);--cs:var(--good-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
+      <div><b>Monitoring page</b><span>Healthy / Degraded / Down for prod in the admin portal.</span></div></div>
+    <div class="feat"><div class="ico" style="--c:var(--azure);--cs:var(--azure-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+      <div><b>Next step</b><span>An outside check (Dynatrace synthetic or App Insights availability test) to measure real uptime.</span></div></div>
+  </div>
+</section>
+
+<!-- ===================== 11. ENTERPRISE ===================== -->
+<section id="enterprise">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--obs)">11</div>
+    <div><h2>Moving to production grade</h2><div class="sub">Same Terraform and Helm code, roughly in order of value</div></div></div>
+
+  <div class="road">
+    <div class="road-item" data-n="1"><span class="gain">survive a datacenter loss</span><b>Spread nodes across availability zones 1, 2, 3</b><p><code>zones = ["1","2","3"]</code> on the node pools</p></div>
+    <div class="road-item" data-n="2"><span class="gain">control-plane SLA</span><b>AKS Standard tier</b><p><code>sku_tier = "Standard"</code></p></div>
+    <div class="road-item" data-n="3"><span class="gain">99.99% database</span><b>PostgreSQL General Purpose + zone-redundant HA</b><p><code>high_availability { mode = "ZoneRedundant" }</code>: automatic failover to a standby</p></div>
+    <div class="road-item" data-n="4"><span class="gain">no single ingress pod</span><b>Traefik 2 replicas + PDB, topology spread for the apps</b><p><code>traefik-values.yaml</code> and the chart</p></div>
+    <div class="road-item" data-n="5"><span class="gain">logins survive a pod loss</span><b>Clustered Keycloak (2+ replicas)</b><p>Keycloak cache settings</p></div>
+    <div class="road-item" data-n="6"><span class="gain">blast radius</span><b>Separate prod cluster and subscription</b><p>A second Terraform state: a dev mistake can never touch prod</p></div>
+    <div class="road-item" data-n="7"><span class="gain">nothing public but the ingress</span><b>Private cluster, private database, Key Vault CSI driver</b><p>Self-hosted agents and private endpoints</p></div>
+    <div class="road-item" data-n="8"><span class="gain">attack protection</span><b>Web Application Firewall</b><p>Application Gateway or Front Door in front of the ingress</p></div>
+    <div class="road-item" data-n="9"><span class="gain">disaster recovery</span><b>Second region behind Azure Front Door</b><p>Same code with another <code>location</code></p></div>
+  </div>
+</section>
+
+<!-- ===================== 12. COMMANDS ===================== -->
+<section id="commands">
+  <div class="sec-head"><div class="sec-num" style="--c:var(--obs)">12</div>
+    <div><h2>Useful commands</h2><div class="sub">Explore the cluster yourself</div></div></div>
+<pre><span class="c"># Connect kubectl (Entra ID login through kubelogin)</span>
+<span class="k">az aks get-credentials</span> -g rg-credpay -n aks-credpay --overwrite-existing
+<span class="k">kubelogin convert-kubeconfig</span> -l azurecli
+
+<span class="c"># Nodes, pools and zones</span>
+<span class="k">kubectl get nodes</span> -L agentpool,topology.kubernetes.io/zone
+
+<span class="c"># What runs where</span>
+<span class="k">kubectl get ns</span>
+<span class="k">kubectl get pods,svc,ingress,hpa,pdb</span> -n credpay-prod -o wide
+
+<span class="c"># Helm releases, history, rollback</span>
+<span class="k">helm list</span> -A
+<span class="k">helm history</span> credpay -n credpay-prod
+<span class="k">helm rollback</span> credpay &lt;revision&gt; -n credpay-prod
+
+<span class="c"># Ingress IP and certificates</span>
+<span class="k">kubectl get svc</span> traefik -n traefik
+<span class="k">kubectl get certificate</span> -A
+
+<span class="c"># Watch self-healing: delete a prod pod and see it come back</span>
+<span class="k">kubectl delete pod</span> -n credpay-prod -l app.kubernetes.io/name=payment-service --wait=false
+<span class="k">kubectl get pods</span> -n credpay-prod -w</pre>
+</section>
+
+<footer>
+  Source of truth: <code>terraform/</code>, <code>charts/credpay/</code>, <code>k8s/platform/</code>,
+  <code>scripts/cd/</code> and <code>pipelines/credpay-cd.yml</code>. Setup steps for a new subscription:
+  <code>docs/03-STUDENT-AZURE-SETUP.md</code>.
+</footer>
+
+</main>
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    try { var saved = localStorage.getItem('credpay-infra-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      var current = root.getAttribute('data-theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('credpay-infra-theme', next); } catch (e) {}
+    });
+  })();
+</script>
+</body>
+</html>
